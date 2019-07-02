@@ -17,9 +17,9 @@ Created on Tue Jul 02 22:33:49 2019
 # voir original sur Github:
 # https://github.com/alexsosn/MarslandMLAlgo/blob/master/Ch10/ga.py
 # Modifications par Pierre Rouarch :
-# de ga Standardà un ga pour trouver les paramètres de réglages de XGBClassifier
+# de ga Standard à un ga pour trouver les paramètres de réglages de XGBClassifier
 # Inspiré par Mohit Jain - "Hyperparameter tuning in XGBoost using genetic algorithm"
-# https://towardsdatascience.com/hyperparameter-tuning-in-xgboost-using-genetic-algorithm-17bd2e581b17
+# https://github.com/mjain72/Hyperparameter-tuning-in-XGBoost-using-genetic-algorithm
 #on a aussi enlevé le plot qui peut être fait à l'extérieur de la classe.
 
 import numpy as np
@@ -132,7 +132,7 @@ class ga_XGBClassifier:
 			self.population = newPopulation  #nouvelle population pour le tour suivant
 
         
-	#recupération des parents
+	#sélection des parents
 	def fps(self,population,fitness):   #echantillonage pour reproduction.
 
 		print("Recupération des parents")
@@ -219,7 +219,7 @@ class ga_XGBClassifier:
 		if parameterSelect == 2: #max_depth
 			mutationValue = np.random.randint(-5, 5, 1)
 		if parameterSelect == 3: #min_child_weight
-			mutationValue = round(np.random.uniform(-5, 5), 2)  #5 ou -5 ?
+			mutationValue = round(np.random.uniform(-5, 5), 2)  
 		if parameterSelect == 4: #gamma
 			mutationValue = round(np.random.uniform(-2, 2), 2)
 		if parameterSelect == 5: #subsample
