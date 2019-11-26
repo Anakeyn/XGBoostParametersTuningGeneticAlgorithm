@@ -5,10 +5,11 @@ Created on Tue Jul 02 18:39:18 2019
 @author: Pierre
 """
 ##########################################################################
-# XGBoostParametersTuningGeneticAlgorithm
+# XGBoostParametersTuningGeneticAlgorithm - modifié le 26/11/2011
 # Auteur : Pierre Rouarch - Licence GPL 3
 # Exemple d'utilisation d'un algorithme génétique pour améliorer les performances 
 # D'un algorithme XGBoost
+# la fonction de fitness ou d'évaluation  se base sur le test score
 #####################################################################################
 
 ###################################################################
@@ -26,7 +27,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 #pour les scores
-from sklearn.metrics import f1_score
+#from sklearn.metrics import f1_score
 #from sklearn.metrics import matthews_corrcoef
 
 print(os.getcwd())  #verif
@@ -43,15 +44,13 @@ print(os.getcwd())  #verif
 #####################################################################
 
 
-#Relecture pour continuer ############
-dfQPPS6 = pd.read_json("dfQPPS6.json")
-dfQPPS6.info(verbose=True) # env 7000 enregistrements.    
-dfQPPS6.reset_index(inplace=True, drop=True) 
-
-
+#Lecture des données suite  à scraping ############
+dfQPPS8 = pd.read_csv("dfQPPS7.csv")
+dfQPPS8.info(verbose=True) # 12194 enregistrements.    
+dfQPPS8.reset_index(inplace=True, drop=True) 
 
 #Variables explicatives
-X =  dfQPPS6[['isHttps', 'level', 
+X =  dfQPPS8[['isHttps', 'level', 
              'lenWebSite', 'lenTokensWebSite',  'lenTokensQueryInWebSiteFrequency',  'sumTFIDFWebSiteFrequency',            
              'lenPath', 'lenTokensPath',  'lenTokensQueryInPathFrequency' , 'sumTFIDFPathFrequency',  
               'lenTitle', 'lenTokensTitle', 'lenTokensQueryInTitleFrequency', 'sumTFIDFTitleFrequency',
@@ -69,7 +68,7 @@ X =  dfQPPS6[['isHttps', 'level',
               'elapsedTime', 'nbrInternalLinks', 'nbrExternalLinks' ]]  #variables explicatives
 
 X.info()
-y =  dfQPPS6['group']  #variable à expliquer,
+y =  dfQPPS8['group']
 
 #on va scaler
 scaler = StandardScaler()
@@ -79,7 +78,11 @@ scaler.fit(X)
 X_Scaled = pd.DataFrame(scaler.transform(X.values), columns=X.columns, index=X.index)
 X_Scaled.info()
 
-X_train, X_test, y_train, y_test = train_test_split(X_Scaled,y, random_state=0)
+#on choisit random_state = 42 en hommage à La grande question sur la vie, l'univers et le reste
+#dans "Le Guide du voyageur galactique"   par  Douglas Adams. Ceci afin d'avoir le même split
+#tout au long de notre étude.
+X_train, X_test, y_train, y_test = train_test_split(X_Scaled,y, random_state=42)
+
 
 
 
@@ -89,11 +92,9 @@ X_train, X_test, y_train, y_test = train_test_split(X_Scaled,y, random_state=0)
 #xgboost avec parametres standards par défaut
 
 myXGBoost =   XGBClassifier().fit(X_train,y_train)
-print("Training set score: {:.3f}".format(myXGBoost.score(X_train,y_train))) #0.909
-print("Test set score: {:.3f}".format(myXGBoost.score(X_test,y_test))) #0.771
-y_pred=myXGBoost.predict(X_Scaled)
-print("F1-Score weighted : {:.4f}".format(f1_score(y, y_pred, average ='weighted')))
-baseF1Score = f1_score(y, y_pred, average ='weighted') #on le sauvegarde pour l'afficher plus tard
+print("Training set score: {:.3f}".format(myXGBoost.score(X_train,y_train))) 
+print("Test set score: {:.3f}".format(myXGBoost.score(X_test,y_test))) 
+baseTestScore = myXGBoost.score(X_test,y_test)
 
 #parametres par défaut    
 myXGBoost.get_xgb_params()
@@ -111,11 +112,11 @@ myXGBoost.get_xgb_params()
 
 
 ###########################  Fonction de Fitness utilisée ici 
-#La fonction d'évaluation est basée sur le  F1_score    
+#La fonction d'évaluation est basée sur le  test score  
 #on calcule le F1 score pour chaque XGBClassifier
 def train_populationClassifier(population, X, y, X_train, X_test, y_train, y_test):
     print("Fitness Function")
-    f1Score = []
+    TestScore = []
     for i in range(population.shape[0]):
         print("Fitness Boucle dans la population "+str(i))
         param = { 'objective':'binary:logistic',
@@ -129,10 +130,10 @@ def train_populationClassifier(population, X, y, X_train, X_test, y_train, y_tes
               'seed': 24}
         
         myXGBClassifier = XGBClassifier(**param).fit(X_train,y_train)
-        preds=myXGBClassifier.predict(X_Scaled)
-        preds = preds>0.5
-        f1Score.append(round((f1_score(y,  preds, average='weighted')), 4))
-    return f1Score
+        #preds=myXGBClassifier.predict(X_Scaled)
+        #preds = preds>0.5
+        TestScore.append(round(myXGBClassifier.score(X_test,y_test), 4))
+    return TestScore
 ###### / fonction de Fitness
     
 ######################################################################
@@ -150,8 +151,11 @@ myGA = ga_XGBClassifier.ga_XGBClassifier(train_populationClassifier,
                                        crossover='un',nElite=4,tournamentOK=True)
 myGA.runGA()  #on boucle dans l'objet créé
 
+#Nouveau Fitness [0.8022, 0.8022, 0.8022, 0.8022, 0.7973, 0.8003, 0.8019, 0.795, 0.795, 0.798]
 
 myGA.bestParams #meileurs parametres par génération
+# dernière génération      [  0.14, 137.  ,  14.  ,   0.19,   0.6 ,   0.78,   0.56]])
+
 myGA.bestfit   #meileur fitness par génération
 nMax=myGA.bestfit.size
 
@@ -160,18 +164,18 @@ nMax=myGA.bestfit.size
 
 
 ###########################################################  
-#Graphique Evolution des meilleurs F1 Scores
+#Graphique Evolution des meilleurs test  Scores
 sns.set()  #paramètres esthétiques ressemble à ggplot par défaut.
 fig, ax = plt.subplots()  #un seul plot
 sns.lineplot(x=np.arange(0,nMax), y=myGA.bestfit[0:nMax])
-fig.suptitle("Le réglage des paramètres permet d'améliorer le F1-Score sensiblement", fontsize=14, fontweight='bold')
-ax.set(xlabel='generation', ylabel='F1 Score',
-       title="Le F1 score passe de "+"{0:.3f}".format(baseF1Score)+" à "+"{0:.3f}".format(myGA.bestfit[nMax-1]) )
+fig.suptitle("Le réglage des paramètres permet d'améliorer le  test Score sensiblement", fontsize=14, fontweight='bold')
+ax.set(xlabel='generation', ylabel='test  Score',
+       title="Le Test score passe de "+"{0:.3f}".format(baseTestScore)+" à "+"{0:.3f}".format(myGA.bestfit[nMax-1]) )
 ax.xaxis.set_ticks(range(nMax))
-fig.text(.3,-.06,"Evolution des meilleurs f1 Scores \n Recherche des meilleurs paramètres XGBoost", 
+fig.text(.3,-.06,"Evolution des meilleurs Test Scores \n Recherche des meilleurs paramètres XGBoost", 
          fontsize=9)
 #plt.show()
-fig.savefig("QPPS6-GA-XGBClassifier-BestF1Scores.png", bbox_inches="tight", dpi=600)
+fig.savefig("QPPS6-GA-XGBClassifier-BestTestScores.png", bbox_inches="tight", dpi=600)
 
 
 ##########################################################################

@@ -46,7 +46,7 @@ class ga_XGBClassifier:
 		self.fitness = np.zeros(self.populationSize)  #pour conserver les derniers fitness #pas sur que cela soit utile
 
 
-		self.fitnessFunction = fitnessFunction #ici calcul du F1 Score de XGBoostClassifier
+		self.fitnessFunction = fitnessFunction #ici calcul du Test Score de XGBoostClassifier
 
 		self.crossover = crossover  #type de crossover 'un' uniforme ou 'sp'
 		self.nElite = nElite              #nombre de parents conservés dans l'élitisme
